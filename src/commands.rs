@@ -4,6 +4,8 @@ pub mod commmands {
     use futures::AsyncReadExt;
     use std::error::Error;
 
+    use crate::config_utils::config_utils::StripConfig;
+
     #[derive(Clone, Copy)]
     pub enum Commands {
         On,
@@ -34,25 +36,49 @@ pub mod commmands {
 
     pub struct Strip {
         socket: Option<TcpStream>,
-        color: (u8, u8, u8),
-        powered: bool,
-        address: String,
-        is_rgbw: bool,
+        pub color: (u8, u8, u8),
+        pub powered: bool,
+        pub address: String,
+        pub is_rgbw: bool,
+    }
+
+    impl Default for Strip {
+        fn default() -> Self {
+            Strip {
+                socket: None,
+                color: (0, 0, 0),
+                powered: false,
+                address: String::from(""),
+                is_rgbw: false,
+            }
+        }
+    }
+
+    impl From<&StripConfig> for Strip {
+        fn from(config: &StripConfig) -> Self {
+            Strip {
+                address: config.ip.clone() + ":" + &config.port.to_string(),
+                is_rgbw: config.is_rgbw,
+                ..Self::default()
+            }
+        }
     }
 
     impl Strip {
         // Constructor based on IP address of the strip
-        pub async fn new(address: String, is_rgbw: Option<bool>) -> Self {
+        pub async fn new(address: String) -> Self {
             let mut tmp_strip = Strip {
-                socket: None,
-                color: (0, 0, 0),
-                powered: false,
-                is_rgbw: is_rgbw.unwrap_or(false),
                 address,
+                ..Self::default()
             };
-            let _ = tmp_strip.connect().await;
-            let _ = tmp_strip.execute(&Commands::GetStatus).await;
+            let _ = tmp_strip.initialize().await;
             tmp_strip
+        }
+
+        pub async fn initialize(&mut self) -> Result<(), Box<dyn Error>> {
+            let _ = self.connect().await?;
+            let _ = self.execute(&Commands::GetStatus).await?;
+            Ok(())
         }
 
         async fn connect(&mut self) -> Result<(), Box<dyn Error>> {
@@ -108,7 +134,12 @@ pub mod commmands {
                             .join(":"))
                     }
                     Commands::SetColor(r, g, b) => {
-                        let buf = vec![0x31, r, g, b, 0x00, 0x0f, 0xff, 0x00];
+                        let buf: Vec<u8>;
+                        if self.is_rgbw {
+                            buf = vec![0x31, g, r, b, 0x00, 0x0f, 0xff, 0x00];
+                        } else {
+                            buf = vec![0x31, r, g, b, 0x00, 0x0f, 0xff, 0x00];
+                        }
                         socket.write_all(&buf).await.expect("Failed to send data");
 
                         let mut buf = vec![0u8; 0];
@@ -124,7 +155,7 @@ pub mod commmands {
                     }
                 }
             } else {
-                Err("No socket available...".into())
+                panic!("No socket available...")
             }
         }
     }
