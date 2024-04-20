@@ -4,7 +4,7 @@ pub mod commmands {
     use futures::AsyncReadExt;
     use std::error::Error;
 
-    use crate::config_utils::config_utils::StripConfig;
+    use crate::config_utils::configs::StripConfig;
 
     #[derive(Clone, Copy)]
     pub enum Commands {
@@ -75,10 +75,10 @@ pub mod commmands {
             tmp_strip
         }
 
-        pub async fn initialize(&mut self) -> Result<(), Box<dyn Error>> {
-            let _ = self.connect().await?;
-            let _ = self.execute(&Commands::GetStatus).await?;
-            Ok(())
+        pub async fn initialize(&mut self) -> Result<String, Box<dyn Error>> {
+            self.connect().await?;
+            let status = self.execute(&Commands::GetStatus).await;
+            Ok(status.unwrap())
         }
 
         async fn connect(&mut self) -> Result<(), Box<dyn Error>> {
@@ -92,7 +92,10 @@ pub mod commmands {
             self.color = (data[6], data[7], data[8]);
         }
 
-        pub async fn execute(&mut self, &command: &Commands) -> Result<String, Box<dyn Error>> {
+        pub async fn execute(
+            &mut self,
+            &command: &Commands,
+        ) -> Result<String, Box<dyn Error + Send + Sync>> {
             // TODO: Wait for response with 0-length payload
             if let Some(socket) = &mut self.socket {
                 match command {

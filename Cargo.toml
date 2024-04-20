@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 async-std = "1.12.0"
+csscolorparser = "0.6.2"
 futures = "0.3.30"
 rocket = "0.5.0"
 serde = "1.0.198"

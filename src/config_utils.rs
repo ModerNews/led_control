@@ -1,4 +1,4 @@
-pub mod config_utils {
+pub mod configs {
     use async_std::fs;
     use async_std::task::block_on;
     use serde::{Deserialize, Serialize};
