@@ -4,12 +4,19 @@ pub mod configs {
     use serde::{Deserialize, Serialize};
     use std::collections::HashMap;
 
-    #[derive(Serialize, Deserialize, Debug)]
+    #[derive(Serialize, Deserialize, Debug, Clone)]
     pub struct Config {
         pub controllers: HashMap<String, StripConfig>,
+        pub macros: Vec<MacroConfig>,
     }
 
-    #[derive(Serialize, Deserialize, Debug)]
+    #[derive(Serialize, Deserialize, Debug, Clone)]
+    pub struct MacroConfig {
+        pub name: String,
+        pub actions: Vec<(String, String)>,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, Clone)]
     pub struct StripConfig {
         pub ip: String,
         pub port: u16,

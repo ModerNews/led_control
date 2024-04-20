@@ -6,12 +6,33 @@ pub mod commmands {
 
     use crate::config_utils::configs::StripConfig;
 
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, Debug)]
     pub enum Commands {
         On,
         Off,
         GetStatus,
         SetColor(u8, u8, u8),
+    }
+
+    impl From<&String> for Commands {
+        fn from(command: &String) -> Self {
+            match command.as_str() {
+                "on" => Commands::On,
+                "off" => Commands::Off,
+                "status" => Commands::GetStatus,
+                _ => {
+                    let command = command.split(", ").collect::<Vec<&str>>();
+                    if command[0] == "color" {
+                        let color = command[1]
+                            .split(",")
+                            .map(|x| x.parse::<u8>().unwrap())
+                            .collect::<Vec<u8>>();
+                        return Commands::SetColor(color[0], color[1], color[2]);
+                    }
+                    panic!("Invalid command")
+                }
+            }
+        }
     }
 
     pub async fn wake_signal() -> Result<(), Box<dyn Error>> {

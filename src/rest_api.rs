@@ -2,11 +2,12 @@ pub mod rest_api_mod {
     use crate::commands::commmands::{Commands, Strip};
     use crate::config_utils::configs::Config;
     use csscolorparser::parse;
-    use rocket::http::{RawStr, Status};
-    use rocket::request::{FromParam, Outcome};
+    use rocket::http::Status;
+    use rocket::request::FromParam;
     use rocket::response::{content, status};
     use rocket::State;
     use tokio::spawn;
+
     #[get("/")]
     fn index() -> status::Custom<content::RawJson<&'static str>> {
         status::Custom(Status::Ok, content::RawJson("{\"status\": \"ok\"}"))
