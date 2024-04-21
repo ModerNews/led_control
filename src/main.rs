@@ -14,7 +14,10 @@ use crate::rest_api::rest_api_mod::rocket;
 use async_std::task::sleep;
 // use futures::future::join;
 use lazy_static::lazy_static;
+use std::process::exit;
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::broadcast;
 
 lazy_static! {
     static ref CONFIG: Config = Config::default();
@@ -23,6 +26,8 @@ lazy_static! {
 #[tokio::main]
 async fn main() {
     println!("Executing startup tasks...");
+    let (stop_signal, _) = broadcast::channel::<()>(1);
+    let stop_signal = Arc::new(stop_signal);
     // let config = Config::default();
     // println!("Config loaded: {:?}", &CONFIG);
     let builded_rocket = rocket(&CONFIG);
@@ -30,8 +35,47 @@ async fn main() {
     let _ = wake_signal().await;
     sleep(Duration::from_secs(5)).await;
     println!("Awaiting response... [5s]");
-    let _ = tokio::join!(builded_rocket.launch(), async_call(&CONFIG));
-    // join(async_call()).await;
+    // task vector contains all the tasks that need to be stopped manually,
+    // rocket.launch() has it's own handler built in
+    tokio::spawn(builded_rocket.launch());
+    let tasks = vec![tokio::spawn(async_call(&CONFIG))];
+    tokio::spawn(handle_stop_signal(Arc::clone(&stop_signal)));
+
+    stop_signal.subscribe().recv().await.unwrap();
+
+    println!("SIGINT received: Now stopping gracefully...");
+    let task = tokio::join!(handle_shutdown(tasks, Arc::clone(&stop_signal)));
+}
+
+async fn handle_shutdown(
+    tasks: Vec<tokio::task::JoinHandle<()>>,
+    stop_signal: Arc<broadcast::Sender<()>>,
+) {
+    tokio::spawn(graceful_shutdown(tasks));
+    tokio::spawn(handle_stop_signal(Arc::clone(&stop_signal)));
+
+    stop_signal.subscribe().recv().await.unwrap();
+
+    println!("Second SIGINT received: send third to stop forcefully...");
+
+    tokio::spawn(handle_stop_signal(Arc::clone(&stop_signal)));
+
+    stop_signal.subscribe().recv().await.unwrap();
+
+    println!("Third SIGINT received: stopping forcefully...");
+    exit(1);
+}
+
+async fn graceful_shutdown(tasks: Vec<tokio::task::JoinHandle<()>>) {
+    for task in tasks {
+        task.abort();
+    }
+    exit(0);
+}
+
+async fn handle_stop_signal(stop_signal: Arc<broadcast::Sender<()>>) {
+    tokio::signal::ctrl_c().await.unwrap();
+    let _ = stop_signal.send(());
 }
 
 async fn async_call(config: &Config) {
@@ -40,6 +84,10 @@ async fn async_call(config: &Config) {
     for macro_ in macros {
         println!("Running macro: {:?}", macro_);
         macro_.run().await;
+    }
+    println!("Now awaiting stop signal...");
+    loop {
+        sleep(Duration::from_secs(5)).await;
     }
 }
 
