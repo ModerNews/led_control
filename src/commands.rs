@@ -12,6 +12,7 @@ pub mod commmands {
         Off,
         GetStatus,
         SetColor(u8, u8, u8),
+        SetBrightness(u8), // It's just a shorthand for SetColor(color*brightness, color*brightness, color*brightness)
     }
 
     impl From<&String> for Commands {
@@ -21,13 +22,16 @@ pub mod commmands {
                 "off" => Commands::Off,
                 "status" => Commands::GetStatus,
                 _ => {
-                    let command = command.split(", ").collect::<Vec<&str>>();
+                    let command = command.split(',').collect::<Vec<&str>>();
                     if command[0] == "color" {
                         let color = command[1]
-                            .split(",")
+                            .split(',')
                             .map(|x| x.parse::<u8>().unwrap())
                             .collect::<Vec<u8>>();
                         return Commands::SetColor(color[0], color[1], color[2]);
+                    } else if command[0] == "brightness" {
+                        let brightness = command[1].parse::<u8>().unwrap();
+                        return Commands::SetBrightness(brightness);
                     }
                     panic!("Invalid command")
                 }
@@ -164,6 +168,33 @@ pub mod commmands {
                         } else {
                             buf = vec![0x31, r, g, b, 0x00, 0x0f, 0xff, 0x00];
                         }
+                        socket.write_all(&buf).await.expect("Failed to send data");
+
+                        let mut buf = vec![0u8; 0];
+                        socket
+                            .read_exact(&mut buf)
+                            .await
+                            .expect("Failed to read data");
+                        Ok(buf
+                            .iter()
+                            .map(|&byte| format!("{:02x}", byte))
+                            .collect::<Vec<_>>()
+                            .join(":"))
+                    }
+                    Commands::SetBrightness(brightness) => {
+                        if brightness > 100 {
+                            panic!("Brightness must be between 0 and 100")
+                        }
+                        let buf = vec![
+                            0x31,
+                            brightness * self.color.0,
+                            brightness * self.color.1,
+                            brightness * self.color.2,
+                            0x00,
+                            0x0f,
+                            0xff,
+                            0x00,
+                        ];
                         socket.write_all(&buf).await.expect("Failed to send data");
 
                         let mut buf = vec![0u8; 0];
