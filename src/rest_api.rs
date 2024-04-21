@@ -29,7 +29,7 @@ pub mod rest_api_mod {
     async fn on(
         name: &str,
         command: Commands,
-        strip_config: &State<Config>,
+        strip_config: &State<&'static Config>,
     ) -> status::Custom<content::RawJson<String>> {
         let mut strip = Strip::from(strip_config.controllers.get(name).unwrap());
         let status = strip.initialize().await;
@@ -45,7 +45,7 @@ pub mod rest_api_mod {
     async fn color(
         name: &str,
         color: &str,
-        strip_config: &State<Config>,
+        strip_config: &State<&'static Config>,
     ) -> status::Custom<content::RawJson<String>> {
         let mut strip = Strip::from(strip_config.controllers.get(name).unwrap());
         let status = strip.initialize().await;
@@ -66,7 +66,7 @@ pub mod rest_api_mod {
     #[get("/<name>/state")]
     async fn get_state(
         name: &str,
-        strip_config: &State<Config>,
+        strip_config: &State<&'static Config>,
     ) -> status::Custom<content::RawJson<String>> {
         let mut strip = Strip::from(strip_config.controllers.get(name).unwrap());
         let _ = strip.initialize().await;
@@ -79,7 +79,7 @@ pub mod rest_api_mod {
         )
     }
 
-    pub fn rocket(parent_config: Config) -> rocket::Rocket<rocket::Build> {
+    pub fn rocket(parent_config: &'static Config) -> rocket::Rocket<rocket::Build> {
         rocket::build()
             .manage(parent_config)
             .mount("/", routes![index, on, color, get_state])

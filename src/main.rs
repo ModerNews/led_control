@@ -16,17 +16,21 @@ use async_std::task::sleep;
 use lazy_static::lazy_static;
 use std::time::Duration;
 
+lazy_static! {
+    static ref CONFIG: Config = Config::default();
+}
+
 #[tokio::main]
 async fn main() {
     println!("Executing startup tasks...");
-    let config = Config::default();
-    println!("Config loaded: {:?}", &config);
-    let builded_rocket = rocket(config.clone());
+    // let config = Config::default();
+    // println!("Config loaded: {:?}", &CONFIG);
+    let builded_rocket = rocket(&CONFIG);
     println!("Sending wake signal...");
     let _ = wake_signal().await;
     sleep(Duration::from_secs(5)).await;
     println!("Awaiting response... [5s]");
-    let _ = tokio::join!(builded_rocket.launch(), async_call(&config));
+    let _ = tokio::join!(builded_rocket.launch(), async_call(&CONFIG));
     // join(async_call()).await;
 }
 
