@@ -59,6 +59,7 @@ pub mod commmands {
         Ok(())
     }
 
+    #[derive(Debug)]
     pub struct Strip {
         socket: Option<TcpStream>,
         pub color: (u8, u8, u8),
@@ -162,12 +163,11 @@ pub mod commmands {
                             .join(":"))
                     }
                     Commands::SetColor(r, g, b) => {
-                        let buf: Vec<u8>;
-                        if self.is_rgbw {
-                            buf = vec![0x31, g, r, b, 0x00, 0x0f, 0xff, 0x00];
+                        let buf = if self.is_rgbw {
+                            vec![0x31, g, r, b, 0x00, 0xf0, 0xff, 0x00]
                         } else {
-                            buf = vec![0x31, r, g, b, 0x00, 0x0f, 0xff, 0x00];
-                        }
+                            vec![0x31, r, g, b, 0x00, 0x0f, 0xff, 0x00]
+                        };
                         socket.write_all(&buf).await.expect("Failed to send data");
 
                         let mut buf = vec![0u8; 0];
