@@ -1,12 +1,13 @@
 pub mod rest_api_mod {
     use crate::commands::commmands::{Commands, Strip};
-    use crate::config_utils::configs::Config;
+    use crate::config_utils::configs::{Config, Read};
     use csscolorparser::parse;
     use rocket::http::Status;
     use rocket::request::FromParam;
     use rocket::response::{content, status};
     use rocket::State;
     use tokio::spawn;
+    use tokio::sync::Mutex;
 
     #[get("/")]
     fn index() -> status::Custom<content::RawJson<&'static str>> {
@@ -29,9 +30,10 @@ pub mod rest_api_mod {
     async fn on(
         name: &str,
         command: Commands,
-        strip_config: &State<&'static Config>,
+        strip_config: &State<&'static Mutex<Config>>,
     ) -> status::Custom<content::RawJson<String>> {
-        let mut strip = Strip::from(strip_config.controllers.get(name).unwrap());
+        let controllers = strip_config.read_controllers().await;
+        let mut strip = Strip::from(controllers.get(name).unwrap());
         let status = strip.initialize().await;
         println!("Status: {:?}", status);
         spawn(async move { strip.execute(&command).await });
@@ -45,17 +47,15 @@ pub mod rest_api_mod {
     async fn color(
         name: &str,
         color: &str,
-        strip_config: &State<&'static Config>,
+        strip_config: &State<&'static Mutex<Config>>,
     ) -> status::Custom<content::RawJson<String>> {
-        let mut strip = Strip::from(strip_config.controllers.get(name).unwrap());
+        let controllers = strip_config.read_controllers().await;
+        let mut strip = Strip::from(controllers.get(name).unwrap());
         let status = strip.initialize().await;
         println!("Status: {:?}", status);
         let color = parse(color).unwrap().to_rgba8();
-        let command = if strip.is_rgbw {
+        let command = Commands::SetColor(color[1], color[0], color[2]);
             Commands::SetColor(color[1], color[0], color[2])
-        } else {
-            Commands::SetColor(color[0], color[1], color[2])
-        };
         spawn(async move { strip.execute(&command).await });
         status::Custom(
             Status::Ok,
@@ -66,9 +66,10 @@ pub mod rest_api_mod {
     #[get("/<name>/state")]
     async fn get_state(
         name: &str,
-        strip_config: &State<&'static Config>,
+        strip_config: &State<&'static Mutex<Config>>,
     ) -> status::Custom<content::RawJson<String>> {
-        let mut strip = Strip::from(strip_config.controllers.get(name).unwrap());
+        let controllers = strip_config.read_controllers().await;
+        let mut strip = Strip::from(controllers.get(name).unwrap());
         let _ = strip.initialize().await;
         status::Custom(
             Status::Ok,
@@ -79,7 +80,7 @@ pub mod rest_api_mod {
         )
     }
 
-    pub fn rocket(parent_config: &'static Config) -> rocket::Rocket<rocket::Build> {
+    pub fn rocket(parent_config: &'static Mutex<Config>) -> rocket::Rocket<rocket::Build> {
         rocket::build()
             .manage(parent_config)
             .mount("/", routes![index, on, color, get_state])

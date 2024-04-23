@@ -6,10 +6,10 @@ mod config_utils;
 mod macros;
 mod rest_api;
 
-use crate::commands::commmands::wake_signal;
 use crate::config_utils::configs::Config;
 use crate::macros::led_macro::Macro;
 use crate::rest_api::rest_api_mod::rocket;
+use crate::{commands::commmands::wake_signal, config_utils::configs::Read};
 
 use async_std::task::sleep;
 // use futures::future::join;
@@ -17,10 +17,10 @@ use lazy_static::lazy_static;
 use std::process::exit;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, Mutex};
 
 lazy_static! {
-    static ref CONFIG: Config = Config::default();
+    static ref CONFIG: Mutex<Config> = Mutex::new(Config::default());
 }
 
 #[tokio::main]
@@ -44,7 +44,7 @@ async fn main() {
     stop_signal.subscribe().recv().await.unwrap();
 
     println!("SIGINT received: Now stopping gracefully...");
-    let task = tokio::join!(handle_shutdown(tasks, Arc::clone(&stop_signal)));
+    tokio::join!(handle_shutdown(tasks, Arc::clone(&stop_signal)));
 }
 
 async fn handle_shutdown(
@@ -78,9 +78,10 @@ async fn handle_stop_signal(stop_signal: Arc<broadcast::Sender<()>>) {
     let _ = stop_signal.send(());
 }
 
-async fn async_call(config: &Config) {
+async fn async_call(config: &Mutex<Config>) {
+    let config = config.read().await;
     let macros = config.macros.clone();
-    let macros = macros.iter().map(|x| Macro::new(x, config));
+    let macros = macros.iter().map(|x| Macro::new(x, &config));
     for macro_ in macros {
         println!("Running macro: {:?}", macro_);
         macro_.run().await;
