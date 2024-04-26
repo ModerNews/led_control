@@ -17,11 +17,11 @@ pub mod configs {
         pub actions: Vec<(String, String)>,
     }
 
-    #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[derive(Serialize, Deserialize, Debug, Clone, FromForm)]
     pub struct StripConfig {
         pub ip: String,
         pub port: u16,
-        // pub friendly_name: String, friendly_name is now the key in the HashMap instead
+        pub friendly_name: String,
         pub is_rgbw: bool,
     }
 
@@ -54,9 +54,23 @@ pub mod configs {
     }
 
     impl Config {
-        pub fn add_controller(&mut self, name: String, ip: String, port: u16, is_rgbw: bool) {
-            self.controllers
-                .insert(name, StripConfig { ip, port, is_rgbw });
+        pub fn add_controller(
+            &mut self,
+            name: &String,
+            friendly_name: &String,
+            ip: &String,
+            port: &u16,
+            is_rgbw: &bool,
+        ) {
+            self.controllers.insert(
+                name.clone(),
+                StripConfig {
+                    friendly_name: friendly_name.clone(),
+                    ip: ip.clone(),
+                    port: port.clone(),
+                    is_rgbw: is_rgbw.clone(),
+                },
+            );
         }
 
         pub fn remove_controller(&mut self, name: String) {

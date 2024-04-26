@@ -1,7 +1,8 @@
 pub mod rest_api_mod {
     use crate::commands::commmands::{Commands, Strip};
-    use crate::config_utils::configs::{Config, Read};
+    use crate::config_utils::configs::{Config, Read, StripConfig};
     use csscolorparser::parse;
+    use rocket::form::Form;
     use rocket::http::Status;
     use rocket::request::FromParam;
     use rocket::response::{content, status};
@@ -55,7 +56,6 @@ pub mod rest_api_mod {
         println!("Status: {:?}", status);
         let color = parse(color).unwrap().to_rgba8();
         let command = Commands::SetColor(color[1], color[0], color[2]);
-            Commands::SetColor(color[1], color[0], color[2])
         spawn(async move { strip.execute(&command).await });
         status::Custom(
             Status::Ok,
@@ -80,9 +80,36 @@ pub mod rest_api_mod {
         )
     }
 
+
+    #[post(
+        "/controllers",
+        format = "application/x-www-form-urlencoded",
+        data = "<target>"
+    )]
+    async fn add_controller(
+        target: Form<StripConfig>,
+        strip_config: &State<&'static Mutex<Config>>,
+    ) -> status::Custom<content::RawJson<String>> {
+        let name = "test".to_string();
+        strip_config.lock().await.add_controller(
+            &name.to_string(),
+            &target.friendly_name,
+            &target.ip,
+            &target.port,
+            &target.is_rgbw,
+        );
+        status::Custom(
+            Status::Ok,
+            content::RawJson(format!(
+                "{{\"status\": \"create\", \"name\": \"{}\", \"state\": {{{:?}}}}}",
+                name, target
+            )),
+        )
+    }
+
     pub fn rocket(parent_config: &'static Mutex<Config>) -> rocket::Rocket<rocket::Build> {
         rocket::build()
             .manage(parent_config)
-            .mount("/", routes![index, on, color, get_state])
+            .mount("/", routes![index, on, color, get_state, add_controller])
     }
 }

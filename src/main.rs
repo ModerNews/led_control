@@ -70,6 +70,7 @@ async fn graceful_shutdown(tasks: Vec<tokio::task::JoinHandle<()>>) {
     for task in tasks {
         task.abort();
     }
+    let _ = &CONFIG.lock().await.write("config.yaml").await;
     exit(0);
 }
 
