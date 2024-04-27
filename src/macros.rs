@@ -66,7 +66,7 @@ pub mod led_macro {
     }
 
     // TODO: Implement Redis macro dispatcher
-    pub async fn native_macro_dispatcher(macros: Vec<Event>) {
+    pub async fn native_event_dispatcher(macros: Vec<Event>) {
         let mut interval = time::interval(Duration::from_secs(1));
         loop {
             interval.tick().await;

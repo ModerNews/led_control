@@ -1,6 +1,7 @@
 pub mod rest_api_mod {
     use crate::commands::commmands::{Commands, Strip};
     use crate::config_utils::configs::{Config, Read, StripConfig};
+    use crate::macros::led_macro::Macro;
     use csscolorparser::parse;
     use rocket::form::Form;
     use rocket::http::Status;
@@ -80,6 +81,32 @@ pub mod rest_api_mod {
         )
     }
 
+    #[get("/<target_macro>/run")]
+    async fn execute_macro(
+        target_macro: &str,
+        strip_config: &State<&'static Mutex<Config>>,
+    ) -> status::Custom<content::RawJson<String>> {
+        let config = strip_config.read().await;
+        let macros = strip_config.read_macros().await;
+        match target_macro.parse::<usize>() {
+            Ok(id) => Macro::new(&macros.get(id).unwrap(), &config).run().await,
+            Err(_) => {
+                Macro::new(
+                    &macros.iter().find(|m| m.name == target_macro).unwrap(),
+                    &config,
+                )
+                .run()
+                .await
+            }
+        };
+        status::Custom(
+            Status::Ok,
+            content::RawJson(format!(
+                "{{\"status\": \"macro\", \"name\": \"{}\"}}",
+                target_macro
+            )),
+        )
+    }
 
     #[post(
         "/controllers",
@@ -108,8 +135,9 @@ pub mod rest_api_mod {
     }
 
     pub fn rocket(parent_config: &'static Mutex<Config>) -> rocket::Rocket<rocket::Build> {
-        rocket::build()
-            .manage(parent_config)
-            .mount("/", routes![index, on, color, get_state, add_controller])
+        rocket::build().manage(parent_config).mount(
+            "/",
+            routes![index, on, color, get_state, add_controller, execute_macro],
+        )
     }
 }
