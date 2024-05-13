@@ -9,6 +9,10 @@ on:
 jobs:
   build-for-ghcr:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      statuses: read 
     steps:
     - uses: actions/checkout@v4
     - name: Set up QEMU
