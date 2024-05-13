@@ -1,3 +1,7 @@
+#[deprecated(
+    since = "0.1.1",
+    note = "This module will be deprecated in the future in favor of new config syntax & moving controllers/macros to a database backend"
+)]
 pub mod configs {
     use async_std::fs;
     use async_std::task::block_on;
@@ -85,7 +89,7 @@ pub mod configs {
 
     impl Default for Config {
         fn default() -> Self {
-            block_on(Self::load("config.yaml")).unwrap()
+            block_on(Self::load("/etc/led-control/config.yaml")).unwrap()
         }
     }
 

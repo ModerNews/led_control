@@ -1,0 +1,26 @@
+# TODO: Replace with actual default config, after new config syntax is merged from the postgres-integration branch
+controllers:
+  bed:
+    ip: 192.168.0.125
+    port: 5577
+    friendly_name: Bed
+    is_rgbw: true
+  desk:
+    ip: 192.168.0.212
+    port: 5577
+    friendly_name: Desk
+    is_rgbw: false
+
+macros:
+- name: All On
+  actions:
+  - - desk
+    - on
+  - - bed
+    - on
+- name: All Off
+  actions:
+  - - desk
+    - off
+  - - bed
+    - off

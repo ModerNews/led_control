@@ -135,7 +135,8 @@ pub mod rest_api_mod {
     }
 
     pub fn rocket(parent_config: &'static Mutex<Config>) -> rocket::Rocket<rocket::Build> {
-        rocket::build().manage(parent_config).mount(
+        let figment = rocket::Config::figment().merge(("address", "0.0.0.0"));
+        rocket::custom(figment).manage(parent_config).mount(
             "/",
             routes![index, on, color, get_state, add_controller, execute_macro],
         )
