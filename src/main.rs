@@ -3,6 +3,7 @@ extern crate rocket;
 
 mod commands;
 mod config_utils;
+mod db;
 mod macros;
 mod rest_api;
 
@@ -80,7 +81,19 @@ async fn handle_stop_signal(stop_signal: Arc<broadcast::Sender<()>>) {
 }
 
 async fn async_call(config: &Mutex<Config>) {
-    let config = config.read().await;
+    use db::models::Controller;
+    use db::schema::controllers::dsl::*;
+    use diesel::prelude::*;
+
+    let connection = &mut db::init::establish_connection();
+
+    let target_controllers = controllers
+        .select(Controller::as_select())
+        .load(connection)
+        .expect("Error loading controllers");
+
+    println!("Controllers: {:?}", target_controllers);
+    /*     let config = config.read().await;
     let macros = config.macros.clone();
     let macros = macros.iter().map(|x| Macro::new(x, &config));
     for macro_ in macros {
@@ -90,7 +103,7 @@ async fn async_call(config: &Mutex<Config>) {
     println!("Now awaiting stop signal...");
     loop {
         sleep(Duration::from_secs(5)).await;
-    }
+    } */
 }
 
 /* async fn async_call() -> Result<(), Box<dyn std::error::Error>> {

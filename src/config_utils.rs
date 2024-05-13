@@ -1,3 +1,7 @@
+#[deprecated(
+    since = "0.1.1",
+    note = "This functionality has been moved to database backends, use those instead."
+)]
 pub mod configs {
     use async_std::fs;
     use async_std::task::block_on;
