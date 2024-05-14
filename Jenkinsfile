@@ -8,10 +8,15 @@ pipeline {
       }
     }
 
-    stage('Build & Start Image') {
-      agent { dockerfile true }
+    stage('Build Docker Image') {
       steps {
-        sh led_control
+        sh 'docker build -t led_control .' 
+      }
+    }
+
+    stage('Run Docker Image') {
+      steps {
+        sh 'docker run -d led_control'
       }
     }
   }
