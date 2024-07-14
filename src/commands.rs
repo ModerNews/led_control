@@ -12,7 +12,7 @@ pub mod commmands {
         Off,
         GetStatus,
         SetColor(u8, u8, u8),
-        SetBrightness(u8), // It's just a shorthand for SetColor(color*brightness, color*brightness, color*brightness)
+        SetBrightness(u8), // It's just a shorthand for SetColor(r*brightness, g*brightness, b*brightness)
     }
 
     impl From<&String> for Commands {

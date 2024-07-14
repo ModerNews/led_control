@@ -8,6 +8,7 @@ mod macros;
 mod rest_api;
 
 use crate::config_utils::configs::Config;
+use crate::db::crud::get_controllers;
 use crate::macros::led_macro::Macro;
 use crate::rest_api::rest_api_mod::rocket;
 use crate::{commands::commmands::wake_signal, config_utils::configs::Read};
@@ -81,18 +82,23 @@ async fn handle_stop_signal(stop_signal: Arc<broadcast::Sender<()>>) {
 }
 
 async fn async_call(config: &Mutex<Config>) {
+    use db::crud::*;
     use db::models::Controller;
     use db::schema::controllers::dsl::*;
     use diesel::prelude::*;
 
     let connection = &mut db::init::establish_connection();
 
-    let target_controllers = controllers
-        .select(Controller::as_select())
-        .load(connection)
-        .expect("Error loading controllers");
+    let target_controllers = get_controllers(connection).await;
+    let target_macros = get_macros(connection).await;
+    let target_actions = get_actions(connection).await;
 
     println!("Controllers: {:?}", target_controllers);
+    println!("Macros: {:?}", target_macros);
+    println!("Actions: {:?}", target_actions);
+
+    println!("Single macro: {:?}", target_macros.first().unwrap());
+    println!("Single action: {:?}", target_actions.first().unwrap());
     /*     let config = config.read().await;
     let macros = config.macros.clone();
     let macros = macros.iter().map(|x| Macro::new(x, &config));
